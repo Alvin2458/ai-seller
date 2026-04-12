@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ai.sellar</groupId>
+        <artifactId>agent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>agent-boot</artifactId>
+    <name>Agent Boot</name>
+    <description>Agent Boot Module</description>
+    <packaging>jar</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- Presentation Layer -->
+        <dependency>
+            <groupId>com.ai.sellar</groupId>
+            <artifactId>agent-presentation</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        
+        <!-- Application Layer -->
+        <dependency>
+            <groupId>com.ai.sellar</groupId>
+            <artifactId>agent-application</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        
+        <!-- Infrastructure Layer -->
+        <dependency>
+            <groupId>com.ai.sellar</groupId>
+            <artifactId>agent-infrastructure</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        
+        <!-- Domain Layer -->
+        <dependency>
+            <groupId>com.ai.sellar</groupId>
+            <artifactId>agent-domain</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        
+        <!-- Spring Boot Starter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        
+        <!-- Spring Boot Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.ai.sellar.agent.Application</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

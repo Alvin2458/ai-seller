@@ -1,0 +1,9 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: voice-agent-dashcope-sdk-example
+  ai:
+    dashscope:
+      api-key: sk-41337288817c49a296738f26ea4eb411

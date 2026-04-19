@@ -75,6 +75,18 @@
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
         </dependency>
+        
+        <!-- FreeSWITCH ESL Client -->
+        <dependency>
+            <groupId>org.freeswitch.esl.client</groupId>
+            <artifactId>org.freeswitch.esl.client</artifactId>
+        </dependency>
+        <!-- Source: https://mvnrepository.com/artifact/link.thingscloud/freeswitch-esl -->
+        <dependency>
+            <groupId>link.thingscloud</groupId>
+            <artifactId>freeswitch-esl</artifactId>
+            <version>2.2.0</version>
+        </dependency>
     </dependencies>
 
 </project>

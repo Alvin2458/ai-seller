@@ -31,4 +31,14 @@ public class PageController {
     public String index() {
         return "index";
     }
+
+    @GetMapping("/voice")
+    public String voice() {
+        return "index2";
+    }
+    
+    @GetMapping("/outbound-call")
+    public String outboundCall() {
+        return "index";
+    }
 }

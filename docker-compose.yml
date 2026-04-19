@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  freeswitch:
+    image: signalwire/freeswitch:latest
+    container_name: freeswitch
+    ports:
+      # SIP ports
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      # RTP ports
+      - "16384-16484:16384-16484/udp"
+      # ESL port
+      - "8021:8021/tcp"
+      # WebSocket port
+      - "8080:8080/tcp"
+    volumes:
+      - ./freeswitch-config:/etc/freeswitch
+    restart: unless-stopped
+    command: ["/usr/bin/freeswitch", "-c"]

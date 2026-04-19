@@ -1,0 +1,20 @@
+<include>
+  <context name="default">
+    <extension name="WebSocket Bridge">
+      <condition field="destination_number" expression="^1000$">
+        <action application="answer"/>
+        <action application="log" data="INFO WebSocket bridge started"/>
+        <action application="javascript" data="socket_bridge.js ${destination_number}"/>
+      </condition>
+    </extension>
+    
+    <!-- Inbound call handling -->
+    <extension name="Inbound WebSocket Bridge">
+      <condition field="destination_number" expression=".+">
+        <action application="answer"/>
+        <action application="log" data="INFO Inbound call received, bridging to WebSocket"/>
+        <action application="javascript" data="socket_bridge.js ${destination_number}"/>
+      </condition>
+    </extension>
+  </context>
+</include>

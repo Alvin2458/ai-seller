@@ -82,6 +82,8 @@ public class VoiceWebSocketHandler implements WebSocketHandler {
         byte[] audioBytes = new byte[buffer.remaining()];
         buffer.get(audioBytes);
         
+        log.debug("Received audio data from FreeSWITCH: {} bytes", audioBytes.length);
+        
         Sinks.Many<ByteBuffer> sink = audioSinks.get(sessionId);
         if (sink == null) {
             log.info("Starting new audio stream for session: {}", sessionId);

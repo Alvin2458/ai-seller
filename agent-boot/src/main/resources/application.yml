@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8000
 
 spring:
   application:
@@ -7,3 +7,13 @@ spring:
   ai:
     dashscope:
       api-key: sk-41337288817c49a296738f26ea4eb411
+
+# FreeSWITCH Configuration
+# FreeSWITCH is running locally (not in Docker)
+freeswitch:
+  esl:
+    host: localhost      # 本机运行的 FreeSWITCH
+    port: 8021          # ESL port
+    password: ClueCon   # Default FreeSWITCH ESL password
+  gateway: default
+  caller-id: "1000"

@@ -16,6 +16,7 @@
 package com.ai.sellar.agent.presentation.config;
 
 import com.ai.sellar.agent.presentation.controller.VoiceWebSocketHandler;
+import com.ai.sellar.agent.presentation.controller.CallMonitorWebSocketHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -33,15 +34,20 @@ import org.springframework.web.socket.server.standard.ServletServerContainerFact
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
     
-    private final VoiceWebSocketHandler handler;
+    private final VoiceWebSocketHandler voiceHandler;
+    private final CallMonitorWebSocketHandler callMonitorHandler;
 
-    public WebSocketConfig(VoiceWebSocketHandler handler) {
-        this.handler = handler;
+    public WebSocketConfig(VoiceWebSocketHandler voiceHandler, CallMonitorWebSocketHandler callMonitorHandler) {
+        this.voiceHandler = voiceHandler;
+        this.callMonitorHandler = callMonitorHandler;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(handler, "/ws").setAllowedOrigins("*");
+        // /ws - Voice pipeline WebSocket (audio streaming)
+        registry.addHandler(voiceHandler, "/ws").setAllowedOrigins("*");
+        // /ws/call-monitor - Call event monitor (STT/Agent/TTS events)
+        registry.addHandler(callMonitorHandler, "/ws/call-monitor").setAllowedOrigins("*");
     }
 
     @Bean

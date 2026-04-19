@@ -18,14 +18,18 @@ package com.ai.sellar.agent.infrastructure.freeswitch;
 import org.freeswitch.esl.client.transport.event.EslEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * FreeSWITCH Event Listener - Handles call events and triggers audio bridge
+ * FreeSWITCH Event Listener - Handles call events and triggers AI voice pipeline.
+ *
+ * Flow:
+ * CHANNEL_CREATE  -> Track the call
+ * CHANNEL_ANSWER  -> Start media bridge (record audio + feed to AI pipeline)
+ * CHANNEL_HANGUP  -> Stop media bridge, cleanup resources
  *
  * @author buvidk
  * @since 2026-04-19
@@ -35,13 +39,8 @@ public class FreeSwitchEventListener {
 
     private static final Logger log = LoggerFactory.getLogger(FreeSwitchEventListener.class);
 
-    @Value("${freeswitch.audio.bridge-host:192.168.1.238}")
-    private String bridgeHost;
-
-    @Value("${freeswitch.audio.bridge-port:8040}")
-    private int bridgePort;
-
     private FreeSwitchClient freeSwitchClient;
+    private MediaBridgeControl mediaBridge;
 
     private final Map<String, CallSessionInfo> activeSessions = new ConcurrentHashMap<>();
 
@@ -51,6 +50,14 @@ public class FreeSwitchEventListener {
         client.setOnChannelAnswer(this::onChannelAnswer);
         client.setOnChannelHangup(this::onChannelHangup);
         log.info("FreeSwitchEventListener registered with FreeSwitchClient");
+    }
+
+    /**
+     * Set the MediaBridgeControl (called from config after both beans are initialized).
+     */
+    public void setMediaBridge(MediaBridgeControl bridge) {
+        this.mediaBridge = bridge;
+        log.info("MediaBridgeControl set in FreeSwitchEventListener");
     }
 
     private void onChannelCreate(EslEvent event) {
@@ -76,8 +83,27 @@ public class FreeSwitchEventListener {
 
             log.info("✅ Channel Answered: uuid={}, caller={}, callee={}", uuid, caller, callee);
 
-            // Start audio recording for AI processing
-            startAudioCapture(uuid);
+            // Update session info
+            CallSessionInfo info = activeSessions.get(uuid);
+            if (info != null) {
+                activeSessions.put(uuid, info.withAnswered());
+            }
+
+            // Start AI media bridge - this records audio and feeds it to the AI pipeline
+            if (mediaBridge != null) {
+                // Delay slightly to let the call settle
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(500);
+                        log.info("🤖 Starting AI voice pipeline for call {}", uuid);
+                        mediaBridge.startBridge(uuid, caller, callee);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }, "ai-bridge-start-" + uuid).start();
+            } else {
+                log.warn("⚠️ MediaBridgeControl not set, cannot start AI pipeline for call {}", uuid);
+            }
 
         } catch (Exception e) {
             log.error("Error handling CHANNEL_ANSWER", e);
@@ -90,48 +116,16 @@ public class FreeSwitchEventListener {
             String hangupCause = getHeader(event, "Hangup-Cause");
 
             log.info("📴 Channel Hangup: uuid={}, cause={}", uuid, hangupCause);
+
+            // Stop AI media bridge
+            if (mediaBridge != null) {
+                mediaBridge.stopBridge(uuid);
+            }
+
             activeSessions.remove(uuid);
 
         } catch (Exception e) {
             log.error("Error handling CHANNEL_HANGUP", e);
-        }
-    }
-
-    /**
-     * Start audio capture for a call using uuid_record
-     * Records audio to a file that can be processed by the AI pipeline
-     */
-    private void startAudioCapture(String uuid) {
-        try {
-            if (freeSwitchClient == null || !freeSwitchClient.canSend()) {
-                log.warn("FreeSWITCH client not available, cannot start audio capture");
-                return;
-            }
-
-            log.info("🔗 Starting audio capture for call {}", uuid);
-
-            // Record both legs of the call as WAV (16kHz mono for AI processing)
-            String recordCmd = String.format(
-                "uuid_record %s start /tmp/call_%s.wav",
-                uuid, uuid
-            );
-            freeSwitchClient.sendAsyncApiCommand("api", recordCmd);
-            log.info("Audio recording started for call {}", uuid);
-
-        } catch (Exception e) {
-            log.error("Failed to start audio capture for call {}", uuid, e);
-        }
-    }
-
-    public void stopAudioBridge(String uuid) {
-        try {
-            if (freeSwitchClient != null && freeSwitchClient.canSend()) {
-                String cmd = String.format("uuid_record %s stop /tmp/call_%s.wav", uuid, uuid);
-                freeSwitchClient.sendApiCommand("api", cmd);
-                log.info("Audio recording stopped for call {}", uuid);
-            }
-        } catch (Exception e) {
-            log.error("Failed to stop audio bridge for call {}", uuid, e);
         }
     }
 
@@ -147,5 +141,19 @@ public class FreeSwitchEventListener {
         }
     }
 
-    public record CallSessionInfo(String uuid, String caller, String callee, String direction) {}
+    public record CallSessionInfo(
+        String uuid,
+        String caller,
+        String callee,
+        String direction,
+        boolean answered
+    ) {
+        public CallSessionInfo(String uuid, String caller, String callee, String direction) {
+            this(uuid, caller, callee, direction, false);
+        }
+
+        public CallSessionInfo withAnswered() {
+            return new CallSessionInfo(uuid, caller, callee, direction, true);
+        }
+    }
 }

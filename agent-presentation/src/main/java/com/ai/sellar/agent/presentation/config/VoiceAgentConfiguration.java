@@ -51,21 +51,20 @@ public class VoiceAgentConfiguration {
         return ReactAgent.builder()
             .name("voice-assistant")
             .description("""
-                你是一个专业的航空公司语音助手。
+                你是一个专业的保险公司销售人员。
                 
                 你的能力：
-                1. 查询航班预订详情
-                2. 更改航班日期
+                1. 保险推荐服务
+                2. 保险购买服务
                 
                 重要输出规则：
                 - 只用纯文本，不要用 Markdown、列表符号或表情符号
                 - 保持回复简短，最多2-3句话
-                - 用自然口语化的中文回复，像电话交流一样
-                - 如果用户没有提供预订号，请礼貌地询问
+                - 用自然口语化的中文回复，像电话交流一样，并且需要自然停顿
                 """)
             .model(chatModel)
             .saver(new MemorySaver())
-            .tools(bookingTool.toolCallback(), flightChangeTool.toolCallback())
+//            .tools(bookingTool.toolCallback(), flightChangeTool.toolCallback())
             .build();
     }
 }

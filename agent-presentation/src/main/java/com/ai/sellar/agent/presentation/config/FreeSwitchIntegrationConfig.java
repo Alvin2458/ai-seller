@@ -15,8 +15,10 @@
  */
 package com.ai.sellar.agent.presentation.config;
 
+import com.ai.sellar.agent.application.service.CallMediaBridge;
 import com.ai.sellar.agent.infrastructure.freeswitch.FreeSwitchClient;
 import com.ai.sellar.agent.infrastructure.freeswitch.FreeSwitchEventListener;
+import com.ai.sellar.agent.infrastructure.freeswitch.MediaBridgeControl;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +26,7 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * FreeSWITCH Integration Configuration
- * Registers event listeners after all beans are initialized.
+ * Registers event listeners and connects media bridge after all beans are initialized.
  *
  * @author buvidk
  * @since 2026-04-19
@@ -36,21 +38,27 @@ public class FreeSwitchIntegrationConfig {
 
     private final FreeSwitchClient freeSwitchClient;
     private final FreeSwitchEventListener eventListener;
+    private final MediaBridgeControl mediaBridge;
 
     public FreeSwitchIntegrationConfig(FreeSwitchClient freeSwitchClient,
-                                       FreeSwitchEventListener eventListener) {
+                                       FreeSwitchEventListener eventListener,
+                                       MediaBridgeControl mediaBridge) {
         this.freeSwitchClient = freeSwitchClient;
         this.eventListener = eventListener;
+        this.mediaBridge = mediaBridge;
     }
 
     @PostConstruct
     public void init() {
-        // Wait for FreeSwitchClient to be connected, then register event listeners
+        // Connect media bridge to event listener
+        eventListener.setMediaBridge(mediaBridge);
+
+        // Register event listeners with FreeSWITCH client
         if (freeSwitchClient.canSend()) {
             eventListener.registerWithClient(freeSwitchClient);
-            log.info("✅ FreeSWITCH event listeners registered successfully");
+            log.info("✅ FreeSWITCH integration fully initialized (event listeners + media bridge)");
         } else {
-            log.warn("⚠️ FreeSWITCH client not connected, event listeners not registered. Will retry on next call.");
+            log.warn("⚠️ FreeSWITCH client not connected, integration deferred");
         }
     }
 }

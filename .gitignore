@@ -1,0 +1,42 @@
+# Maven build output
+target/
+*.jar
+*.war
+*.ear
+*.class
+
+# Maven flattened POM files (generated)
+.flattened-pom.xml
+**/.flattened-pom.xml
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# Documentation (non-source)
+resume_polished.md
+
+# Docker (if not needed in repo)
+docker-compose.yml

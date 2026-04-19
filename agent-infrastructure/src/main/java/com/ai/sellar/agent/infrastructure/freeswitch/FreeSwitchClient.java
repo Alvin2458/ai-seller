@@ -156,7 +156,9 @@ public class FreeSwitchClient {
     }
 
     /**
-     * Make an outbound call to an extension number
+     * Make an outbound call to an extension number.
+     * When the call is answered, the Lua bridge script runs to keep the session alive
+     * while the Java backend controls audio via ESL.
      */
     public CompletableFuture<String> makeOutboundCallToExtension(String extensionNumber, String callerId) {
         if (!canSend()) {
@@ -165,10 +167,13 @@ public class FreeSwitchClient {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
+                // originate to user, on answer run lua bridge script which keeps session alive
+                // Java backend then uses ESL to record audio and play TTS
                 String originateArg = String.format(
-                        "user/%s &park()", extensionNumber
+                        "{origination_caller_id_number=%s}user/%s &lua(ai_voice_bridge.lua)",
+                        callerId, extensionNumber
                 );
-                log.info("📞 Initiating outbound call to extension {}", extensionNumber);
+                log.info("📞 Initiating outbound call to extension {} (AI voice mode)", extensionNumber);
                 String jobUuid = sendAsyncApiCommand("originate", originateArg);
                 log.info("✅ Call initiated - Job UUID: {}", jobUuid);
                 return jobUuid;
@@ -322,7 +327,7 @@ public class FreeSwitchClient {
         try {
             String command = String.format("uuid_exec %s javascript socket_bridge.js %s", callUuid, callUuid);
             log.info("Starting WebSocket bridge for call {} to {}", callUuid, websocketUrl);
-            return sendApiCommand("api", command);
+            return sendApiCommand("uuid_exec", String.format("%s javascript socket_bridge.js %s", callUuid, callUuid));
         } catch (Exception e) {
             log.error("❌ Failed to start WebSocket bridge for call {}", callUuid, e);
             throw new RuntimeException("Failed to start WebSocket bridge", e);

@@ -63,7 +63,7 @@ public class DashScopeRealtimeSTT {
                     .sampleRate(16000)
                     .apiKey(apiKey)
                     .build();
-                
+
                 Flowable<ByteBuffer> rxAudioStream = Flowable.fromPublisher(audioStream);
                 
                 AtomicReference<String> lastText = new AtomicReference<>("");
@@ -76,6 +76,8 @@ public class DashScopeRealtimeSTT {
                         String text = result.getSentence() != null 
                             ? result.getSentence().getText() 
                             : "";
+
+                        log.info("获取的语音内容：{}",  text);
                         
                         lastText.set(text);
                         lastIsSentenceEnd.set(result.isSentenceEnd());

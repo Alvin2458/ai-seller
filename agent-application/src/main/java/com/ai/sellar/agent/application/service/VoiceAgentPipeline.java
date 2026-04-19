@@ -18,6 +18,7 @@ package com.ai.sellar.agent.application.service;
 import com.ai.sellar.agent.infrastructure.stt.DashScopeRealtimeSTT;
 import com.ai.sellar.agent.infrastructure.tts.DashScopeRealtimeTTS;
 import com.ai.sellar.agent.domain.event.*;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -25,9 +26,14 @@ import reactor.core.publisher.Flux;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 /**
  * Voice Agent Pipeline: STT -> Agent -> TTS
+ *
+ * Supports two modes:
+ * 1. Call mode (continuous): For phone calls - processes multiple utterances
+ * 2. Stream mode (one-shot): For browser WebSocket - processes one audio stream
  *
  * @author buvidk
  * @since 2026-02-03
@@ -53,19 +59,26 @@ public class VoiceAgentPipeline {
 
     /**
      * Stream processing pipeline: Audio -> STT -> Agent -> TTS
+     * For phone calls: processes continuous audio stream.
+     * Each sentence end triggers Agent -> TTS cycle.
+     *
+     * @param audioInput PCM audio stream (16-bit 16kHz mono)
+     * @param threadId Thread/conversation ID for agent memory
+     * @return Event stream including STT results, Agent responses, and TTS audio
      */
     public Flux<VoiceAgentEvent> processStream(Flux<ByteBuffer> audioInput, String threadId) {
         log.info("Starting streaming pipeline for thread: {}", threadId);
-        
+
         AtomicReference<StringBuilder> agentTextBuffer = new AtomicReference<>(new StringBuilder());
-        
+
         return realtimeSTT.transcribe(audioInput)
-            .flatMap(event -> {
+            .concatMap(event -> {
                 if (event instanceof STTOutputEvent sttOutput) {
-                    log.info("STT completed, calling agent: {}", sttOutput.transcript());
+                    String transcript = sttOutput.transcript();
+                    log.info("🗣️ STT completed, calling agent: {}", transcript);
                     return Flux.concat(
                         Flux.just(event),
-                        agentService.chat(threadId, sttOutput.transcript())
+                        agentService.chat(threadId, transcript)
                             .doOnNext(agentEvent -> {
                                 if (agentEvent instanceof AgentChunkEvent chunk) {
                                     agentTextBuffer.get().append(chunk.text());
@@ -76,16 +89,16 @@ public class VoiceAgentPipeline {
                     return Flux.just(event);
                 }
             })
-            .flatMap(event -> {
+            .concatMap(event -> {
                 if (event instanceof AgentEndEvent) {
                     String agentText = agentTextBuffer.get().toString();
                     agentTextBuffer.set(new StringBuilder());
-                    
+
                     if (!agentText.isBlank()) {
-                        log.info("Agent completed, calling TTS: {}", agentText);
+                        log.info("🤖 Agent completed, calling TTS: {}", agentText);
                         return Flux.concat(
-                            Flux.just(event),
-                            realtimeTTS.synthesize(agentText)
+                                realtimeTTS.synthesize(agentText),
+                                Flux.just(event)
                         );
                     }
                 }
@@ -94,15 +107,15 @@ public class VoiceAgentPipeline {
             .doOnComplete(() -> log.info("Pipeline completed for thread: {}", threadId))
             .doOnError(e -> log.error("Pipeline error for thread: {}", threadId, e));
     }
-    
+
     /**
      * Text input pipeline: Text -> Agent -> TTS
      */
     public Flux<VoiceAgentEvent> processTextStream(String userMessage, String threadId) {
         log.info("Processing text stream for thread {}: {}", threadId, userMessage);
-        
+
         AtomicReference<StringBuilder> agentTextBuffer = new AtomicReference<>(new StringBuilder());
-        
+
         return agentService.chat(threadId, userMessage)
             .doOnNext(event -> {
                 if (event instanceof AgentChunkEvent chunk) {
